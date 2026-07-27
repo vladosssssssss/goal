@@ -141,7 +141,10 @@ $('#fabAdd').addEventListener('click', () => openModal('add'));
 // поддерживает прямые запросы из браузера (CORS) — то, что нужно для полностью статического сайта.
 const GEMINI_KEY_STORAGE = 'gm_openrouter_key';
 const AI_MODEL = 'nvidia/nemotron-3-ultra-550b-a55b:free';
-function getGeminiKey() { return localStorage.getItem(GEMINI_KEY_STORAGE) || ''; }
+// Ключ вшит прямо в код, чтобы ИИ работал сразу на любом устройстве/браузере без ручной настройки.
+// Если в localStorage есть свой ключ (поле в Настройках) — используется он вместо вшитого.
+const DEFAULT_OPENROUTER_KEY = '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';
+function getGeminiKey() { return localStorage.getItem(GEMINI_KEY_STORAGE) || DEFAULT_OPENROUTER_KEY; }
 
 $('#settingsBtn').addEventListener('click', () => {
   updateThemeButtons();
@@ -151,7 +154,7 @@ $('#settingsBtn').addEventListener('click', () => {
   $('#s-new-password-confirm').value = '';
   $('#passwordError').style.display = 'none';
   $('#passwordSaved').style.display = 'none';
-  $('#s-gemini-key').value = getGeminiKey();
+  $('#s-gemini-key').value = localStorage.getItem(GEMINI_KEY_STORAGE) || '';
   $('#geminiKeySaved').style.display = 'none';
   openModal('settings');
 });
@@ -782,7 +785,15 @@ const AI_BASE_PERSONA = `Ты — тёплый, внимательный и че
 Важно: пользователь сам выбрал период и тип анализа перед отправкой запроса — учитывай это как осознанный выбор с конкретной целью
 (например, если это конец года — вероятно, хочет подвести итоги; если начало года — вероятно, планирует; если конкретный месяц —
 скорее всего вспоминает именно тот отрезок времени). Явно ориентируйся на даты записей, чтобы понимать, какой это период и почему
-пользователь мог обратиться именно к нему.`;
+пользователь мог обратиться именно к нему.
+
+ГЛАВНОЕ ПРАВИЛО ПО ДЛИНЕ ОТВЕТА: по умолчанию отвечай КОРОТКО — 3-6 предложений, один компактный абзац, только самое важное и по делу.
+Не расписывай каждую цель/запись отдельным пунктом и не дели ответ на много разделов — это первый черновой ответ, дальше пользователь
+сам уточнит, если ему нужно что-то раскрыть подробнее. Разворачивай ответ подробно ТОЛЬКО если пользователь явно попросил
+("подробнее", "разверни", "по каждой цели отдельно" и т.п.) — тогда можно писать длиннее и по пунктам.
+Это диалог: пользователь может задать уточняющий вопрос после твоего ответа — отвечай на него по существу, коротко, опираясь на
+данные и на то, что уже обсуждали, а не повторяй заново весь анализ. Никогда не используй markdown-разметку (звёздочки, решётки,
+списки с дефисами) — только обычный текст.`;
 
 function moodAnalysisPrompt(entries, userMessage, period) {
   return `${AI_BASE_PERSONA}
@@ -793,12 +804,8 @@ ${fmtMoodForPrompt(entries)}
 
 Комментарий/контекст от пользователя (может быть пустым, тогда ориентируйся только на данные): "${userMessage || '—'}"
 
-Задача: сделай выжимку "было → стало" именно за указанный период. Ответь по структуре:
-1. Что изменилось за этот период (кратко, по фактам из данных, с опорой на конкретные даты/тренды).
-2. Что стало лучше / легче.
-3. Что всё ещё беспокоит или не решено.
-4. Один конкретный, поддерживающий вывод или мягкая рекомендация с учётом периода (без давления, без "просто думай позитивно").
-Пиши на русском, живым языком, 150-250 слов, без списков markdown со звёздочками — обычным текстом с абзацами.`;
+Задача: коротко скажи, что изменилось "было → стало" за этот период — что стало лучше, что всё ещё беспокоит, и один конкретный
+вывод или мягкая рекомендация. Держись правила длины ответа из системной инструкции выше (по умолчанию коротко).`;
 }
 
 function goalsAnalysisPrompt(goals, userMessage, period) {
@@ -812,16 +819,14 @@ ${fmtGoalsForPrompt(goals)}
 
 Комментарий/контекст от пользователя (может быть пустым): "${userMessage || '—'}"
 
-Задача:
-1. Раздели цели на группы по статусу и дай короткий комментарий по каждой группе с опорой на прогресс/комментарии пользователя.
-2. Отдельно отметь цели со статусом "failed" — предложи, стоит ли переносить их на следующий год или отпустить.
-3. Отметь, если какая-то цель "зависла" без изменений долго (updatedAt близко к createdAt при низком прогрессе) — мягко обрати внимание.
-4. Заверши коротким мотивирующим, но честным выводом с учётом периода — без пустых похвал.
-Пиши на русском, структурированно, но без markdown-разметки со звёздочками (обычные абзацы и подзаголовки текстом).`;
+Задача: коротко скажи, что в целом выполнено, что провалено и стоит перенести/отпустить, что "зависло" без движения — и заверши
+одним честным выводом. Держись правила длины ответа из системной инструкции выше (по умолчанию коротко, без разбора цели за целью).`;
 }
 
-// ===================== Прямой вызов ИИ через OpenRouter (ключ хранится только в этом браузере) =====================
-async function callGeminiDirect(prompt) {
+// ===================== Прямой вызов ИИ через OpenRouter (ключ вшит в код, см. DEFAULT_OPENROUTER_KEY) =====================
+// Принимает массив сообщений [{role:'user'|'assistant', content:'...'}] — так поддерживается диалог
+// с уточняющими вопросами, а не только разовый запрос.
+async function callGeminiDirect(messages) {
   const key = getGeminiKey();
   if (!key) {
     return {
@@ -839,7 +844,7 @@ async function callGeminiDirect(prompt) {
       },
       body: JSON.stringify({
         model: AI_MODEL,
-        messages: [{ role: 'user', content: prompt }],
+        messages,
       }),
     }).then((x) => x.json());
     const text = r && r.choices && r.choices[0] && r.choices[0].message && r.choices[0].message.content;
@@ -860,20 +865,46 @@ let aiRange = { from: null, to: null, label: 'всё время' };
 let aiChartData = [];
 let selectedMonths = new Set(); // многовыборный набор месяцев 'YYYY-M', выбранных кликом по столбикам графика
 
+// Диалог с ИИ: aiConversation — полная история сообщений, отправляемая в OpenRouter (первое user-сообщение
+// содержит весь конструированный промпт с данными); aiDisplay — упрощённая версия для показа в интерфейсе
+// (там вместо гигантского промпта с данными показывается просто то, что реально ввёл пользователь).
+let aiConversation = [];
+let aiDisplay = [];
+
 function monthKeyLabel(key) {
   const [y, m] = key.split('-').map(Number);
   return MONTH_NAMES_NOM[m - 1] + ' ' + y;
 }
 
-function setAiLoading(msg) {
-  const box = $('#aiResult');
-  box.className = 'ai-result loading';
-  box.textContent = msg || 'Думаю…';
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
-function setAiResult(text) {
-  const box = $('#aiResult');
-  box.className = 'ai-result';
-  box.textContent = text;
+
+function resetAiThread() {
+  aiConversation = [];
+  aiDisplay = [];
+  renderAiThread(false);
+}
+
+function renderAiThread(loading) {
+  const box = $('#aiThread');
+  const followup = $('#aiFollowup');
+  if (!aiDisplay.length && !loading) {
+    box.innerHTML = '';
+    box.style.display = 'none';
+    followup.style.display = 'none';
+    return;
+  }
+  box.style.display = 'flex';
+  let html = aiDisplay
+    .map((m) => `<div class="ai-msg ${m.role}"><div class="ai-msg-bubble">${escapeHtml(m.text)}</div></div>`)
+    .join('');
+  if (loading) {
+    html += '<div class="ai-msg assistant loading"><div class="ai-msg-bubble">Думаю…</div></div>';
+  }
+  box.innerHTML = html;
+  box.scrollTop = box.scrollHeight;
+  if (aiDisplay.length && !loading) followup.style.display = 'flex';
 }
 
 $all('.ai-type-btn').forEach((btn) => {
@@ -881,6 +912,7 @@ $all('.ai-type-btn').forEach((btn) => {
     $all('.ai-type-btn').forEach((b) => b.classList.remove('active'));
     btn.classList.add('active');
     aiKind = btn.dataset.kind;
+    resetAiThread(); // тип данных сменился — старый диалог больше не актуален
     loadAiChart();
   });
 });
@@ -902,6 +934,7 @@ $all('.ai-period-btn').forEach((btn) => {
     }
     updateAiPeriodLabel();
     highlightChartBar();
+    resetAiThread(); // период сменился — старый диалог больше не актуален
   });
 });
 
@@ -941,6 +974,7 @@ function renderAiChart() {
       $all('.ai-period-btn').forEach((b) => b.classList.remove('active'));
       updateAiPeriodLabel();
       highlightChartBar();
+      resetAiThread(); // выбор месяцев сменился — старый диалог больше не актуален
     });
   });
   highlightChartBar();
@@ -978,8 +1012,11 @@ async function loadAiChart() {
   renderAiChart();
 }
 
+// Первый запрос анализа: собирает данные за выбранный период и запускает диалог с чистого листа.
 async function callAi(userMessage) {
-  setAiLoading();
+  aiConversation = [];
+  aiDisplay = [{ role: 'user', text: userMessage && userMessage.trim() ? userMessage.trim() : 'Анализ без комментария' }];
+  renderAiThread(true);
   try {
     const isGoals = aiKind === 'goals';
     const r = isGoals ? await asGet({ type: 'goals' }) : await asGet({ type: 'mood' });
@@ -998,17 +1035,68 @@ async function callAi(userMessage) {
     const prompt = isGoals
       ? goalsAnalysisPrompt(filtered, userMessage || '', period)
       : moodAnalysisPrompt(filtered, userMessage || '', period);
-    const result = await callGeminiDirect(prompt);
-    if (result.ok) setAiResult(result.text);
-    else setAiResult(result.error || 'Не удалось получить ответ от ИИ.');
+    aiConversation.push({ role: 'user', content: prompt });
+    const result = await callGeminiDirect(aiConversation);
+    if (result.ok) {
+      aiConversation.push({ role: 'assistant', content: result.text });
+      aiDisplay.push({ role: 'assistant', text: result.text });
+    } else {
+      aiConversation = [];
+      aiDisplay.push({ role: 'assistant', text: result.error || 'Не удалось получить ответ от ИИ.' });
+    }
   } catch (e) {
-    setAiResult('Ошибка запроса: ' + e.message);
+    aiConversation = [];
+    aiDisplay.push({ role: 'assistant', text: 'Ошибка запроса: ' + e.message });
   }
+  renderAiThread(false);
+}
+
+// Уточняющий вопрос внутри уже начатого диалога — переиспользует историю, не пересобирает данные заново.
+async function askAiFollowup(userMessage) {
+  const text = userMessage && userMessage.trim();
+  if (!text) return;
+  if (!aiConversation.length) {
+    // Диалога ещё нет (например, сбросился) — трактуем как обычный первый запрос.
+    callAi(text);
+    return;
+  }
+  aiDisplay.push({ role: 'user', text });
+  aiConversation.push({ role: 'user', content: text });
+  renderAiThread(true);
+  try {
+    const result = await callGeminiDirect(aiConversation);
+    if (result.ok) {
+      aiConversation.push({ role: 'assistant', content: result.text });
+      aiDisplay.push({ role: 'assistant', text: result.text });
+    } else {
+      aiConversation.pop(); // не засоряем историю неотвеченным вопросом
+      aiDisplay.push({ role: 'assistant', text: result.error || 'Не удалось получить ответ от ИИ.' });
+    }
+  } catch (e) {
+    aiConversation.pop();
+    aiDisplay.push({ role: 'assistant', text: 'Ошибка запроса: ' + e.message });
+  }
+  renderAiThread(false);
 }
 
 $('#btnAskAi').addEventListener('click', () => {
   const text = $('#ai-input').value.trim();
   callAi(text);
+});
+
+$('#btnAskFollowup').addEventListener('click', () => {
+  const input = $('#ai-followup-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  askAiFollowup(text);
+});
+
+$('#ai-followup-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    $('#btnAskFollowup').click();
+  }
 });
 
 // ===================== Инициализация =====================

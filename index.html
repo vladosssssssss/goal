@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="theme-color" content="#0a0a0b" />
 <title>Цели и Настроение</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml" />
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -151,7 +152,12 @@
               <button class="btn-primary btn-block" id="btnAskAi">Получить анализ</button>
             </div>
 
-            <div class="ai-result" id="aiResult"></div>
+            <div class="ai-thread" id="aiThread"></div>
+
+            <div class="ai-followup" id="aiFollowup" style="display:none;">
+              <textarea id="ai-followup-input" rows="1" placeholder="Уточнить / спросить ещё…"></textarea>
+              <button class="btn-secondary" id="btnAskFollowup">Спросить</button>
+            </div>
           </div>
         </div>
       </section>
@@ -283,9 +289,9 @@
         <div class="save-confirm" id="passwordSaved" style="display:none;">Пароль обновлён.</div>
         <button type="button" class="btn-primary btn-block" id="savePasswordBtn">Сохранить пароль</button>
 
-        <label style="margin-top:24px;">Ключ OpenRouter (для ИИ-анализа)</label>
-        <input type="password" id="s-gemini-key" placeholder="Вставь ключ с openrouter.ai/keys" autocomplete="off" />
-        <p class="muted small settings-hint">Хранится только в этом браузере, никуда кроме OpenRouter не отправляется. Бесплатный ключ без карты: <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a></p>
+        <label style="margin-top:24px;">Свой ключ OpenRouter (необязательно)</label>
+        <input type="password" id="s-gemini-key" placeholder="ИИ уже работает из коробки — сюда только если хочешь свой ключ" autocomplete="off" />
+        <p class="muted small settings-hint">ИИ подключён по умолчанию, ничего вставлять не нужно. Это поле — только если хочешь использовать свой личный ключ вместо общего (например, если общий упрётся в дневной лимит). Бесплатный ключ без карты: <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a></p>
         <div class="save-confirm" id="geminiKeySaved" style="display:none;">Ключ сохранён.</div>
         <button type="button" class="btn-secondary btn-block" id="saveGeminiKeyBtn">Сохранить ключ</button>
 
