@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#0a0a0b" />
+<title>Цели и Настроение</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-dot"></span>
+        <span class="brand-text">Цели &amp; Настроение</span>
+      </div>
+      <nav class="tabs">
+        <button class="tab-btn active" data-tab="goals">Цели</button>
+        <button class="tab-btn" data-tab="mood">Настроение</button>
+        <button class="tab-btn" data-tab="ai">ИИ</button>
+      </nav>
+      <div class="topbar-right">
+        <div class="status-pill" id="statusPill">…</div>
+        <button class="theme-toggle" id="themeToggle" title="Сменить тему" aria-label="Сменить тему">
+          <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4.2" stroke="currentColor" stroke-width="1.6"/><path d="M12 2.5v2.2M12 19.3v2.2M4.2 4.2l1.55 1.55M18.25 18.25l1.55 1.55M2.5 12h2.2M19.3 12h2.2M4.2 19.8l1.55-1.55M18.25 5.75l1.55-1.55" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 1 0 10.5 10.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <!-- ===================== ЦЕЛИ ===================== -->
+      <section class="tab-panel active" id="tab-goals">
+        <div class="section-header">
+          <div>
+            <h1>Мои цели</h1>
+          </div>
+          <div class="section-actions">
+            <div class="dropdown" id="filterStatusDropdown">
+              <button type="button" class="dropdown-toggle">
+                <span class="dropdown-value">Все статусы</span>
+                <svg class="dropdown-arrow icon" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <div class="dropdown-menu">
+                <div class="dropdown-option active" data-value="all">Все статусы</div>
+                <div class="dropdown-option" data-value="todo">Цель</div>
+                <div class="dropdown-option" data-value="in_progress">В процессе</div>
+                <div class="dropdown-option" data-value="partial">Частично</div>
+                <div class="dropdown-option" data-value="done">Выполнено</div>
+                <div class="dropdown-option" data-value="failed">Не выполнено</div>
+              </div>
+            </div>
+            <button id="refreshGoals" class="btn-ghost" title="Обновить сейчас">
+              <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M20 11A8 8 0 1 0 18.5 15.5M20 11V5M20 11h-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button id="openAddModalBtn" class="btn-primary btn-add-desktop">
+              <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              Добавить цель
+            </button>
+          </div>
+        </div>
+
+        <div class="stats-dash" id="goalStats"></div>
+
+        <div class="goal-groups" id="goalGroups">
+          <p class="muted">Загрузка целей…</p>
+        </div>
+      </section>
+
+      <!-- ===================== НАСТРОЕНИЕ ===================== -->
+      <section class="tab-panel" id="tab-mood">
+        <div class="panel-grid-single">
+          <div class="card mood-card">
+            <h2>Как ты сейчас?</h2>
+            <p class="muted small">
+              Приватная запись — сохраняется в таблицу, но нигде не отображается в интерфейсе.
+              Попроси ИИ сравнить, как изменилось твоё состояние со временем — во вкладке «ИИ».
+            </p>
+            <form id="moodForm">
+              <label>Настроение: <span id="m-mood-val">5</span>/10</label>
+              <input type="range" id="m-mood" min="1" max="10" value="5" />
+
+              <label>Энергия: <span id="m-energy-val">5</span>/10</label>
+              <input type="range" id="m-energy" min="1" max="10" value="5" />
+
+              <label>Сон / отдых: <span id="m-sleep-val">5</span>/10</label>
+              <input type="range" id="m-sleep" min="1" max="10" value="5" />
+
+              <label>Состояние сейчас</label>
+              <div class="chip-group" id="moodTags">
+                <button type="button" class="chip" data-tag="спокоен">спокоен</button>
+                <button type="button" class="chip" data-tag="тревога">тревога</button>
+                <button type="button" class="chip" data-tag="вдохновлён">вдохновлён</button>
+                <button type="button" class="chip" data-tag="устал">устал</button>
+                <button type="button" class="chip" data-tag="радость">радость</button>
+                <button type="button" class="chip" data-tag="стресс">стресс</button>
+                <button type="button" class="chip" data-tag="грусть">грусть</button>
+                <button type="button" class="chip" data-tag="злость">злость</button>
+                <button type="button" class="chip" data-tag="мотивация">мотивация</button>
+                <button type="button" class="chip" data-tag="пустота">пустота</button>
+              </div>
+
+              <label>Расскажи подробнее (необязательно)</label>
+              <textarea id="m-note" rows="5" placeholder="Что происходит, какая ситуация, что чувствуешь..."></textarea>
+
+              <button type="submit" class="btn-primary btn-block">Сохранить состояние</button>
+              <div class="save-confirm" id="moodSaved" style="display:none;">Сохранено. Используй вкладку «ИИ», чтобы получить выжимку.</div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== ИИ ===================== -->
+      <section class="tab-panel" id="tab-ai">
+        <div class="panel-grid-single">
+          <div class="card ai-card">
+            <h2>ИИ-анализ</h2>
+            <p class="muted small" id="aiNotice">Проверяю статус ИИ…</p>
+
+            <label>Что анализируем</label>
+            <div class="chip-group ai-type-toggle">
+              <button type="button" class="chip ai-type-btn active" data-kind="goals">Цели</button>
+              <button type="button" class="chip ai-type-btn" data-kind="mood">Настроение</button>
+            </div>
+
+            <label>Период</label>
+            <div class="ai-period-quick">
+              <button type="button" class="btn-secondary ai-period-btn active" data-range="all">Всё время</button>
+              <button type="button" class="btn-secondary ai-period-btn" data-range="month">Этот месяц</button>
+              <button type="button" class="btn-secondary ai-period-btn" data-range="year">Этот год</button>
+            </div>
+
+            <div class="ai-chart" id="aiChart"></div>
+            <p class="muted small ai-chart-hint">Можно выбрать сразу несколько месяцев — клик по столбику добавляет/убирает его из выборки.</p>
+            <p class="muted small" id="aiPeriodLabel">Период: всё время</p>
+
+            <div class="ai-chat">
+              <label>Комментарий / контекст (необязательно)</label>
+              <textarea id="ai-input" rows="3" placeholder='Например: "У меня была такая ситуация: ... Расскажи, что изменилось"'></textarea>
+              <button class="btn-primary btn-block" id="btnAskAi">Получить анализ</button>
+            </div>
+
+            <div class="ai-result" id="aiResult"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- FAB для мобильных -->
+    <button class="fab" id="fabAdd" aria-label="Добавить цель">
+      <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+
+  <!-- ===================== МОДАЛКА: ДОБАВИТЬ ЦЕЛЬ ===================== -->
+  <div class="modal-overlay" id="addModalOverlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Новая цель / мечта</h2>
+        <button class="icon-btn js-close-modal" data-modal="add" aria-label="Закрыть">
+          <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <form id="goalForm" class="modal-body">
+        <label>Название</label>
+        <input type="text" id="g-title" placeholder="Например: пробежать полумарафон" required autofocus />
+
+        <label>Описание / детали</label>
+        <textarea id="g-description" rows="3" placeholder="Почему это важно, что нужно сделать..."></textarea>
+
+        <div class="row">
+          <div>
+            <label>Категория</label>
+            <input type="text" id="g-category" list="cat-list" placeholder="Здоровье, карьера..." />
+            <datalist id="cat-list">
+              <option value="Здоровье"></option>
+              <option value="Карьера"></option>
+              <option value="Финансы"></option>
+              <option value="Отношения"></option>
+              <option value="Саморазвитие"></option>
+              <option value="Мечта"></option>
+            </datalist>
+          </div>
+          <div>
+            <label>Год</label>
+            <input type="number" id="g-year" value="2026" />
+          </div>
+        </div>
+
+        <label>Тэги (через запятую)</label>
+        <input type="text" id="g-tags" placeholder="важное, привычка, срочно" />
+
+        <button type="submit" class="btn-primary btn-block">Добавить цель</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===================== МОДАЛКА: РЕДАКТИРОВАТЬ ПРОГРЕСС ===================== -->
+  <div class="modal-overlay" id="editModalOverlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Прогресс по цели</h2>
+        <button class="icon-btn js-close-modal" data-modal="edit" aria-label="Закрыть">
+          <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="edit-goal-title" id="editGoalTitle"></div>
+        <div class="edit-goal-meta" id="editGoalMeta"></div>
+
+        <label>Статус</label>
+        <div class="dropdown dropdown-block" id="eStatusDropdown">
+          <button type="button" class="dropdown-toggle">
+            <span class="dropdown-value">Цель (не начато)</span>
+            <svg class="dropdown-arrow icon" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="dropdown-menu">
+            <div class="dropdown-option active" data-value="todo">Цель (не начато)</div>
+            <div class="dropdown-option" data-value="in_progress">В процессе</div>
+            <div class="dropdown-option" data-value="partial">Частично выполнено</div>
+            <div class="dropdown-option" data-value="done">Полностью выполнено</div>
+            <div class="dropdown-option" data-value="failed">Не выполнено (перенести на след. год)</div>
+          </div>
+        </div>
+
+        <label>Прогресс: <span id="e-progress-val">0%</span></label>
+        <input type="range" id="e-progress" min="0" max="100" value="0" />
+
+        <label>Комментарий</label>
+        <textarea id="e-comment" rows="3" placeholder="Как всё прошло? Что получилось?"></textarea>
+
+        <button type="button" class="btn-secondary btn-block" id="editRolloverBtn" style="display:none;">Перенести на следующий год →</button>
+
+        <div class="modal-actions">
+          <button class="btn-danger" id="editDeleteBtn">
+            <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-9 0 1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Удалить
+          </button>
+          <button class="btn-primary" id="editSaveBtn">Сохранить</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
