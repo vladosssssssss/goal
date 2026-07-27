@@ -1,0 +1,6 @@
+{
+  "sheetWebAppUrl": "ВСТАВЬ_СЮДА_ССЫЛКУ_НА_СВОЙ_APPS_SCRIPT_WEB_APP",
+  "geminiApiKey": "",
+  "geminiModel": "gemini-2.0-flash",
+  "port": 3838
+}

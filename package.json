@@ -1,0 +1,13 @@
+{
+  "name": "celi-i-nastroenie",
+  "version": "1.0.0",
+  "description": "Личный сайт: цели/мечты на год + приватный трекер настроения + ИИ-анализ (Google Gemini). Без внешних npm-зависимостей.",
+  "private": true,
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
