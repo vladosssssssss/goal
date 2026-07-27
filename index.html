@@ -8,6 +8,34 @@
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <script>
+    if (location.protocol === 'file:') {
+      document.write(
+        '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:#0a0a0b;color:#f3f3f4;font-family:-apple-system,\'Segoe UI\',Roboto,Arial,sans-serif;text-align:center;">' +
+        '<div style="max-width:440px;">' +
+        '<div style="font-size:40px;margin-bottom:14px;">⚠️</div>' +
+        '<h1 style="font-size:20px;margin:0 0 12px;">Сайт открыт неправильно</h1>' +
+        '<p style="color:#8d8d93;line-height:1.6;margin:0 0 16px;">Файл открыт напрямую из папки (file://), поэтому данные из Google Таблицы не загружаются — это ограничение браузера, а не баг.</p>' +
+        '<p style="line-height:1.6;margin:0 0 6px;">Запусти сервер (файл <b>start.bat</b> в папке сайта) и открой в браузере:</p>' +
+        '<p style="font-size:18px;font-weight:700;background:#17171a;border:1px solid #262629;border-radius:12px;padding:12px 16px;margin:0;">http://localhost:3838</p>' +
+        '</div></div>'
+      );
+      document.close();
+      throw new Error('STOP: opened via file:// — see message on screen');
+    }
+  </script>
+  <div class="lock-overlay" id="lockOverlay">
+    <div class="lock-box">
+      <div class="brand lock-brand"><span class="brand-dot"></span><span class="brand-text">Цели &amp; Настроение</span></div>
+      <h2>Введите пароль</h2>
+      <form id="lockForm">
+        <input type="password" id="lockPassword" placeholder="Пароль" autocomplete="current-password" autofocus required />
+        <div class="lock-error" id="lockError" style="display:none;"></div>
+        <button type="submit" class="btn-primary btn-block">Войти</button>
+      </form>
+    </div>
+  </div>
+
   <div class="app">
     <header class="topbar">
       <div class="brand">
@@ -21,9 +49,8 @@
       </nav>
       <div class="topbar-right">
         <div class="status-pill" id="statusPill">…</div>
-        <button class="theme-toggle" id="themeToggle" title="Сменить тему" aria-label="Сменить тему">
-          <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4.2" stroke="currentColor" stroke-width="1.6"/><path d="M12 2.5v2.2M12 19.3v2.2M4.2 4.2l1.55 1.55M18.25 18.25l1.55 1.55M2.5 12h2.2M19.3 12h2.2M4.2 19.8l1.55-1.55M18.25 5.75l1.55-1.55" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-          <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 1 0 10.5 10.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        <button class="theme-toggle" id="settingsBtn" title="Настройки" aria-label="Настройки">
+          <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z" stroke="currentColor" stroke-width="1.6"/><path d="M19.4 13.5c.04-.33.06-.66.06-1s-.02-.67-.06-1l2.02-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.38.96a7.4 7.4 0 0 0-1.73-1l-.36-2.53a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.53a7.4 7.4 0 0 0-1.73 1l-2.38-.96a.5.5 0 0 0-.6.22L2.7 9.28a.5.5 0 0 0 .12.64L4.84 11.5c-.04.33-.06.66-.06 1s.02.67.06 1L2.82 15.08a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.4.31.6.22l2.38-.96c.53.42 1.11.76 1.73 1l.36 2.53c.04.25.25.42.5.42h3.84c.25 0 .46-.17.5-.42l.36-2.53a7.4 7.4 0 0 0 1.73-1l2.38.96c.2.09.47 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64L19.4 13.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
         </button>
       </div>
     </header>
@@ -238,6 +265,41 @@
           </button>
           <button class="btn-primary" id="editSaveBtn">Сохранить</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== МОДАЛКА: НАСТРОЙКИ ===================== -->
+  <div class="modal-overlay" id="settingsModalOverlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Настройки</h2>
+        <button class="icon-btn js-close-modal" data-modal="settings" aria-label="Закрыть">
+          <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <label>Тема оформления</label>
+        <div class="theme-switch-row">
+          <button type="button" class="theme-opt" data-theme="dark">
+            <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 1 0 10.5 10.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+            Тёмная
+          </button>
+          <button type="button" class="theme-opt" data-theme="light">
+            <svg class="icon" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4.2" stroke="currentColor" stroke-width="1.6"/><path d="M12 2.5v2.2M12 19.3v2.2M4.2 4.2l1.55 1.55M18.25 18.25l1.55 1.55M2.5 12h2.2M19.3 12h2.2M4.2 19.8l1.55-1.55M18.25 5.75l1.55-1.55" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            Светлая
+          </button>
+        </div>
+
+        <label style="margin-top:24px;">Пароль входа</label>
+        <input type="password" id="s-current-password" placeholder="Текущий пароль" autocomplete="current-password" style="display:none;" />
+        <input type="password" id="s-new-password" placeholder="Новый пароль" autocomplete="new-password" style="margin-top:8px;" />
+        <input type="password" id="s-new-password-confirm" placeholder="Повторите новый пароль" autocomplete="new-password" style="margin-top:8px;" />
+        <div class="lock-error" id="passwordError" style="display:none;"></div>
+        <div class="save-confirm" id="passwordSaved" style="display:none;">Пароль обновлён.</div>
+        <button type="button" class="btn-primary btn-block" id="savePasswordBtn">Сохранить пароль</button>
+
+        <button type="button" class="btn-danger btn-block" id="logoutBtn" style="margin-top:22px;">Выйти</button>
       </div>
     </div>
   </div>

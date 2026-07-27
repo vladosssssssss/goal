@@ -72,9 +72,15 @@ function applyTheme(theme) {
   const saved = localStorage.getItem(THEME_KEY) || 'dark';
   applyTheme(saved);
 })();
-$('#themeToggle').addEventListener('click', () => {
+function updateThemeButtons() {
   const current = document.documentElement.getAttribute('data-theme') || 'dark';
-  applyTheme(current === 'dark' ? 'light' : 'dark');
+  $all('.theme-opt').forEach((b) => b.classList.toggle('active', b.dataset.theme === current));
+}
+$all('.theme-opt').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    applyTheme(btn.dataset.theme);
+    updateThemeButtons();
+  });
 });
 
 // ===================== Табы =====================
@@ -108,6 +114,115 @@ document.addEventListener('keydown', (e) => {
 
 $('#openAddModalBtn').addEventListener('click', () => openModal('add'));
 $('#fabAdd').addEventListener('click', () => openModal('add'));
+
+$('#settingsBtn').addEventListener('click', () => {
+  updateThemeButtons();
+  $('#s-current-password').style.display = authState.passwordSet ? 'block' : 'none';
+  $('#s-current-password').value = '';
+  $('#s-new-password').value = '';
+  $('#s-new-password-confirm').value = '';
+  $('#passwordError').style.display = 'none';
+  $('#passwordSaved').style.display = 'none';
+  openModal('settings');
+});
+
+// ===================== Вход по паролю (гейт на весь интерфейс) =====================
+let authState = { passwordSet: false, authenticated: true };
+
+async function checkAuthStatus() {
+  try {
+    authState = await fetch('/api/auth/status').then((x) => x.json());
+  } catch (e) {
+    authState = { ok: false, passwordSet: false, authenticated: true };
+  }
+  return authState;
+}
+
+function showLock() {
+  $('#lockOverlay').classList.add('open');
+  setTimeout(() => $('#lockPassword') && $('#lockPassword').focus(), 50);
+}
+function hideLock() {
+  $('#lockOverlay').classList.remove('open');
+}
+
+$('#lockForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const errEl = $('#lockError');
+  errEl.style.display = 'none';
+  const password = $('#lockPassword').value;
+  try {
+    const r = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    }).then((x) => x.json());
+    if (r.ok) {
+      $('#lockPassword').value = '';
+      authState.authenticated = true;
+      hideLock();
+      startApp();
+    } else {
+      errEl.textContent = r.error || 'Неверный пароль';
+      errEl.style.display = 'block';
+    }
+  } catch (e) {
+    errEl.textContent = 'Нет связи с сервером';
+    errEl.style.display = 'block';
+  }
+});
+
+$('#savePasswordBtn').addEventListener('click', async () => {
+  const errEl = $('#passwordError');
+  const okEl = $('#passwordSaved');
+  errEl.style.display = 'none';
+  okEl.style.display = 'none';
+  const currentPassword = $('#s-current-password').value;
+  const newPassword = $('#s-new-password').value;
+  const confirmPassword = $('#s-new-password-confirm').value;
+  if (newPassword.trim().length < 4) {
+    errEl.textContent = 'Пароль должен быть не короче 4 символов';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (newPassword !== confirmPassword) {
+    errEl.textContent = 'Пароли не совпадают';
+    errEl.style.display = 'block';
+    return;
+  }
+  try {
+    const r = await fetch('/api/auth/set-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currentPassword, newPassword }),
+    }).then((x) => x.json());
+    if (r.ok) {
+      authState.passwordSet = true;
+      authState.authenticated = true;
+      $('#s-current-password').style.display = 'block';
+      $('#s-current-password').value = '';
+      $('#s-new-password').value = '';
+      $('#s-new-password-confirm').value = '';
+      okEl.style.display = 'block';
+      setTimeout(() => (okEl.style.display = 'none'), 3000);
+    } else {
+      errEl.textContent = r.error || 'Не удалось сохранить пароль';
+      errEl.style.display = 'block';
+    }
+  } catch (e) {
+    errEl.textContent = 'Нет связи с сервером';
+    errEl.style.display = 'block';
+  }
+});
+
+$('#logoutBtn').addEventListener('click', async () => {
+  try {
+    await fetch('/api/auth/logout', { method: 'POST' });
+  } catch (e) {}
+  authState.authenticated = false;
+  closeModal('settings');
+  showLock();
+});
 
 // ===================== Статус ИИ / таблицы =====================
 async function loadStatus() {
@@ -152,7 +267,13 @@ function setSyncHint() {}
 
 async function syncGoalsFromServer() {
   try {
-    const r = await fetch('/api/goals').then((x) => x.json());
+    const res = await fetch('/api/goals');
+    if (res.status === 401) {
+      authState.authenticated = false;
+      showLock();
+      return false;
+    }
+    const r = await res.json();
     if (r && r.ok) {
       const fresh = r.data || [];
       const changed = JSON.stringify(fresh) !== JSON.stringify(allGoals);
@@ -703,12 +824,23 @@ $('#btnAskAi').addEventListener('click', () => {
 });
 
 // ===================== Инициализация =====================
-$('#g-year').value = new Date().getFullYear();
-renderGoals(); // мгновенно из кэша
-loadStatus();
-updateAiPeriodLabel();
-loadAiChart();
-syncGoalsFromServer(true).then(() => {
-  if (aiKind === 'goals') loadAiChart();
-}); // затем свежие данные с сервера в фоне
-scheduleBackgroundSync();
+function startApp() {
+  $('#g-year').value = new Date().getFullYear();
+  renderGoals(); // мгновенно из кэша
+  loadStatus();
+  updateAiPeriodLabel();
+  loadAiChart();
+  syncGoalsFromServer(true).then(() => {
+    if (aiKind === 'goals') loadAiChart();
+  }); // затем свежие данные с сервера в фоне
+  scheduleBackgroundSync();
+}
+
+(async function initAuthGate() {
+  await checkAuthStatus();
+  if (authState.passwordSet && !authState.authenticated) {
+    showLock();
+  } else {
+    startApp();
+  }
+})();
