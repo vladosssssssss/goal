@@ -180,20 +180,33 @@ async function sha256Hex(text) {
 
 const SESSION_KEY = 'gm_session_expiry';
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 дней
+// Локальный кэш «пароль вообще задан на сервере?» — чтобы решать, показывать ли экран блокировки,
+// сразу из localStorage, не дожидаясь ответа от Google Таблицы при каждом открытии/обновлении страницы.
+const PASSWORD_SET_CACHE_KEY = 'gm_password_set_cache';
 
 let authSalt = null;
 let authState = { passwordSet: false, authenticated: true };
+
+// Мгновенное решение без сети: открывать сразу из кэша/сессии, а сеть проверяем уже в фоне.
+function quickAuthState() {
+  const passwordSet = localStorage.getItem(PASSWORD_SET_CACHE_KEY) === '1';
+  const expiry = Number(localStorage.getItem(SESSION_KEY) || 0);
+  const authenticated = !passwordSet || Date.now() < expiry;
+  return { passwordSet, authenticated };
+}
 
 async function checkAuthStatus() {
   try {
     const r = await asGet({ type: 'settings' });
     const passwordSet = !!(r && r.data && r.data.passwordSet);
     authSalt = (r && r.data && r.data.authSalt) || null;
+    localStorage.setItem(PASSWORD_SET_CACHE_KEY, passwordSet ? '1' : '0');
     const expiry = Number(localStorage.getItem(SESSION_KEY) || 0);
     const authenticated = !passwordSet || Date.now() < expiry;
     authState = { ok: true, passwordSet, authenticated };
   } catch (e) {
-    authState = { ok: false, passwordSet: false, authenticated: true };
+    // Нет связи — остаёмся с тем, что уже знаем локально, не блокируем интерфейс.
+    authState = { ok: false, ...quickAuthState() };
   }
   return authState;
 }
@@ -270,6 +283,7 @@ $('#savePasswordBtn').addEventListener('click', async () => {
     await asPost({ action: 'setPassword', hash: newHash });
     authState.passwordSet = true;
     authState.authenticated = true;
+    localStorage.setItem(PASSWORD_SET_CACHE_KEY, '1');
     markSessionActive();
     $('#s-current-password').style.display = 'block';
     $('#s-current-password').value = '';
@@ -1112,11 +1126,18 @@ function startApp() {
   scheduleBackgroundSync();
 }
 
-(async function initAuthGate() {
-  await checkAuthStatus();
+(function initAuthGate() {
+  // Открываем сразу по локальным данным — без сети — и только потом тихо сверяемся с сервером.
+  authState = { ok: true, ...quickAuthState() };
   if (authState.passwordSet && !authState.authenticated) {
     showLock();
   } else {
     startApp();
   }
+  checkAuthStatus().then(() => {
+    // Если сервер говорит, что пароль всё-таки нужен, а мы уже открыли приложение — блокируем сейчас.
+    if (authState.passwordSet && !authState.authenticated && !$('#lockOverlay').classList.contains('open')) {
+      showLock();
+    }
+  });
 })();

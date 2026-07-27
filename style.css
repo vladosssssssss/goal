@@ -747,7 +747,10 @@ input[type="range"] {
   width: 100%;
   max-width: 460px;
   max-height: 88vh;
+  max-height: 88dvh; /* dvh учитывает реально видимую область на мобильных (адресную строку и т.д.) */
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   box-shadow: var(--shadow);
   animation: modalIn .18s cubic-bezier(.2,.9,.3,1.2);
 }
@@ -801,6 +804,7 @@ input[type="range"] {
   .goal-grid { grid-template-columns: 1fr; }
   .row { grid-template-columns: 1fr 90px; }
   .modal { max-width: 100%; border-radius: 20px 20px 0 0; position: fixed; bottom: 0; left: 0; right: 0; max-height: 92vh; }
+  .modal { max-height: 92dvh; }
   .modal-overlay { align-items: flex-end; padding: 0; }
   .modal-overlay.open { animation: none; }
   .lock-box { max-width: 100%; }
