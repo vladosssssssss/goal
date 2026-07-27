@@ -136,8 +136,11 @@ document.addEventListener('keydown', (e) => {
 $('#openAddModalBtn').addEventListener('click', () => openModal('add'));
 $('#fabAdd').addEventListener('click', () => openModal('add'));
 
-// ===================== Ключ Gemini (хранится только в этом браузере) =====================
-const GEMINI_KEY_STORAGE = 'gm_gemini_key';
+// ===================== Ключ ИИ — OpenRouter (хранится только в этом браузере) =====================
+// OpenRouter даёт бесплатные модели без привязки карты и, в отличие от Google/Gemini,
+// поддерживает прямые запросы из браузера (CORS) — то, что нужно для полностью статического сайта.
+const GEMINI_KEY_STORAGE = 'gm_openrouter_key';
+const AI_MODEL = 'nvidia/nemotron-3-ultra-550b-a55b:free';
 function getGeminiKey() { return localStorage.getItem(GEMINI_KEY_STORAGE) || ''; }
 
 $('#settingsBtn').addEventListener('click', () => {
@@ -298,8 +301,8 @@ function loadStatus() {
   const notice = $('#aiNotice');
   if (notice) {
     notice.textContent = hasKey
-      ? 'ИИ подключен через Google Gemini. Можешь запускать анализ.'
-      : 'ИИ ещё не настроен: добавь бесплатный ключ Google Gemini в Настройках (шестерёнка справа вверху). Ключ хранится только в этом браузере.';
+      ? 'ИИ подключен через OpenRouter. Можешь запускать анализ.'
+      : 'ИИ ещё не настроен: добавь бесплатный ключ OpenRouter в Настройках (шестерёнка справа вверху). Ключ хранится только в этом браузере.';
   }
 }
 
@@ -727,7 +730,7 @@ function summarizeByMonth(items, dateField) {
     .map((month) => ({ month, count: counts[month] }));
 }
 
-// ===================== Промпты для ИИ-анализа (Google Gemini) =====================
+// ===================== Промпты для ИИ-анализа (OpenRouter) =====================
 // Данные о настроении никогда не показываются напрямую пользователю в интерфейсе — только через выжимку ИИ.
 const AI_STATUS_TEXT = {
   todo: 'цель поставлена, ещё не начата',
@@ -817,32 +820,33 @@ ${fmtGoalsForPrompt(goals)}
 Пиши на русском, структурированно, но без markdown-разметки со звёздочками (обычные абзацы и подзаголовки текстом).`;
 }
 
-// ===================== Прямой вызов Google Gemini (ключ хранится только в этом браузере) =====================
+// ===================== Прямой вызов ИИ через OpenRouter (ключ хранится только в этом браузере) =====================
 async function callGeminiDirect(prompt) {
   const key = getGeminiKey();
   if (!key) {
     return {
       ok: false,
       needsKey: true,
-      error: 'ИИ пока не настроен. Добавь свой бесплатный ключ Google Gemini в Настройках (шестерёнка справа вверху).',
+      error: 'ИИ пока не настроен. Добавь свой бесплатный ключ OpenRouter в Настройках (шестерёнка справа вверху).',
     };
   }
-  const model = 'gemini-2.0-flash';
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
   try {
-    const r = await fetch(url, {
+    const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + key,
+      },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
+        model: AI_MODEL,
+        messages: [{ role: 'user', content: prompt }],
       }),
     }).then((x) => x.json());
-    if (r && r.candidates && r.candidates[0]) {
-      const text = r.candidates[0].content.parts.map((p) => p.text).join('\n');
+    const text = r && r.choices && r.choices[0] && r.choices[0].message && r.choices[0].message.content;
+    if (text) {
       return { ok: true, text };
     }
-    return { ok: false, error: (r && r.error && r.error.message) || 'Ошибка ответа Gemini' };
+    return { ok: false, error: (r && r.error && r.error.message) || 'Ошибка ответа от ИИ' };
   } catch (e) {
     return { ok: false, error: e.message };
   }
